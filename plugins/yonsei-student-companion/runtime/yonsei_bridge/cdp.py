@@ -204,6 +204,7 @@ class CdpConnection:
     def __init__(self, websocket_url: str) -> None:
         self.websocket = WebSocket(websocket_url)
         self._next_id = 1
+        self._id_lock = threading.Lock()
         self._pending: dict[int, tuple[threading.Event, dict[str, Any]]] = {}
         self._events: deque[dict[str, Any]] = deque(maxlen=4000)
         self._condition = threading.Condition()
@@ -245,6 +246,7 @@ class CdpConnection:
                     with self._condition:
                         self._events.append(message)
                         self._condition.notify_all()
+                    self._handle_automatic_event(message)
                 fragments.clear()
                 fragment_opcode = 1
         except (EOFError, OSError):
@@ -255,11 +257,37 @@ class CdpConnection:
                 response["error"] = {"message": "Chrome DevTools connection closed."}
                 event.set()
 
+    def _command_id(self) -> int:
+        with self._id_lock:
+            command_id = self._next_id
+            self._next_id += 1
+        return command_id
+
+    def _send_untracked(self, method: str, params: dict[str, Any]) -> None:
+        """Send a CDP command that the reader thread must not wait on."""
+        self.websocket.send(
+            json.dumps(
+                {
+                    "id": self._command_id(),
+                    "method": method,
+                    "params": params,
+                }
+            )
+        )
+
+    def _handle_automatic_event(self, message: dict[str, Any]) -> None:
+        """Dismiss informational alerts so their triggering command can finish."""
+        if message.get("method") != "Page.javascriptDialogOpening":
+            return
+        params = message.get("params", {})
+        if params.get("type") != "alert":
+            return
+        self._send_untracked("Page.handleJavaScriptDialog", {"accept": True})
+
     def command(self, method: str, params: dict[str, Any] | None = None, timeout: float = 15.0) -> Any:
         if self._closed:
             raise CdpError("Chrome DevTools connection is closed.")
-        command_id = self._next_id
-        self._next_id += 1
+        command_id = self._command_id()
         event = threading.Event()
         response: dict[str, Any] = {}
         self._pending[command_id] = (event, response)

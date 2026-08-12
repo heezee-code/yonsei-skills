@@ -1,7 +1,7 @@
 {
   "name": "yonsei-student-companion",
-  "version": "0.6.0",
-  "description": "한 번 로그인한 전용 관리 브라우저를 이어 쓰고 포털·Underwood·LearnUs·출결과 생활관·장학금·교환학생 업무를 자연어로 처리합니다.",
+  "version": "0.7.0",
+  "description": "공개 수강편람은 브라우저 없이 조회하고, 로그인이 필요한 포털·Underwood·LearnUs·출결과 생활관·장학금·교환학생 업무는 전용 관리 브라우저를 이어 처리합니다.",
   "author": {
     "name": "mrcha033",
     "url": "https://github.com/mrcha033"
@@ -23,7 +23,7 @@
   "interface": {
     "displayName": "오늘의 연세·포털 연결",
     "shortDescription": "한 번 로그인하고 학교생활을 한눈에",
-    "longDescription": "앱이 여는 연세 전용 관리 브라우저에서 학생이 직접 로그인하면 같은 프로필을 계속 재사용합니다. 지원되는 환경에서는 이미 열린 공식 탭에도 연결할 수 있습니다. 포털·Underwood·LearnUs·출결의 읽기 결과와 생활관·장학금·교환학생의 공식 화면 진행을 자연어로 돕습니다.",
+    "longDescription": "공개 Underwood 수강편람은 공식 HTTPS JSON을 직접 조회하므로 브라우저·로그인·macOS 권한 설정이 필요하지 않습니다. 로그인이 필요한 업무에서는 앱이 여는 연세 전용 관리 브라우저에서 학생이 직접 로그인하면 같은 프로필을 계속 재사용합니다. 포털·Underwood 개인자료·LearnUs·출결의 읽기 결과와 생활관·장학금·교환학생의 공식 화면 진행을 자연어로 돕습니다.",
     "developerName": "mrcha033",
     "category": "Education",
     "capabilities": [
@@ -34,7 +34,7 @@
       "Browser-guided scholarship tracking",
       "Browser-guided exchange journey tracking",
       "Fast authenticated Portal and Underwood commands",
-      "Direct official Underwood course-handbook search",
+      "Zero-setup official Underwood course-handbook search",
       "Cross-platform shuttle, space, dorm, and document actions",
       "Single student-language router",
       "Student-friendly recovery messages and primary results"

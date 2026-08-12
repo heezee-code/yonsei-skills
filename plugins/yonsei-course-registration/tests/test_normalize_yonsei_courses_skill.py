@@ -12,6 +12,8 @@ SCRIPT = (
     / "scripts"
     / "normalize_courses.py"
 )
+SKILL = SCRIPT.parents[1] / "SKILL.md"
+OPENAI_METADATA = SCRIPT.parents[1] / "agents" / "openai.yaml"
 BUILD_SCRIPT = (
     Path(__file__).resolve().parents[1]
     / "skills"
@@ -32,6 +34,13 @@ def run_script(payload):
 
 
 class NormalizeYonseiCoursesSkillTests(unittest.TestCase):
+    def test_routes_natural_language_catalog_queries_to_the_bridge(self):
+        instructions = SKILL.read_text(encoding="utf-8")
+        metadata = OPENAI_METADATA.read_text(encoding="utf-8")
+        self.assertIn('action: "search"', instructions)
+        self.assertIn("Do not use general web search", instructions)
+        self.assertIn("allow_implicit_invocation: true", metadata)
+
     def test_normalizes_korean_fields_days_and_campus(self):
         result = run_script(
             {

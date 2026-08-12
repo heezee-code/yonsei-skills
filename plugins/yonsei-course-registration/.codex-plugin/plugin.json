@@ -1,7 +1,7 @@
 {
   "name": "yonsei-course-registration",
-  "version": "0.5.1",
-  "description": "‘오늘의 연세·포털 연결’의 로그인을 이어 Underwood 수강편람을 직접 조회하고, 정원·개인 마일리지 이력·졸업 중요도를 반영해 수강신청 전략을 만듭니다.",
+  "version": "0.6.0",
+  "description": "브라우저나 로그인 없이 Underwood 공개 수강편람을 직접 조회하고, 필요할 때만 개인 마일리지 이력·정원·졸업 중요도를 반영해 수강신청 전략을 만듭니다.",
   "author": {
     "name": "mrcha033",
     "url": "https://github.com/mrcha033"
@@ -19,12 +19,12 @@
   "interface": {
     "displayName": "연세 수강계획 도우미",
     "shortDescription": "시간표 조합과 마일리지 배분 전략",
-    "longDescription": "‘오늘의 연세·포털 연결’의 전용 브라우저 로그인을 이어 Underwood 수강편람을 직접 조회하고, 시간·캠퍼스 이동·공강·학점 조건을 검사해 시간표 후보를 순위화합니다. 개인 마일리지 이력과 현재 확인 가능한 정원·신청자, 동점자 기준, 필수 여부, 대체 과목을 함께 고려합니다. 수강신청 화면이 기간 제한으로 닫혀도 인증된 수강편람 조회는 이어갑니다.",
+    "longDescription": "공개 Underwood 수강편람은 공식 HTTPS JSON으로 직접 조회하므로 브라우저·로그인·Accessibility·화면 기록 설정이 필요하지 않습니다. 시간·캠퍼스 이동·공강·학점 조건을 검사해 시간표 후보를 순위화합니다. 개인 마일리지 이력과 현재 정원·신청자 자료가 필요한 전략만 ‘오늘의 연세·포털 연결’의 로그인 세션을 이어 사용합니다.",
     "developerName": "mrcha033",
     "category": "Education",
     "capabilities": [
       "Course-row normalization",
-      "Authenticated Underwood handbook query",
+      "Browser-free official Underwood handbook query",
       "Registration-period independent course discovery",
       "Schedule and campus conflict checks",
       "Explicit course-plan constraint audits",

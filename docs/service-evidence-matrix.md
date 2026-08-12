@@ -1,7 +1,8 @@
 # Yonsei service evidence matrix
 
-Checked 2026-07-30 with public reads and an authenticated managed browser for
-Portal/Underwood checks. One Korean enrollment-certificate **free-print PDF**
+Checked 2026-08-12 with public reads, a browser-free Underwood course query,
+and an authenticated managed browser for login-dependent Portal/Underwood
+checks. One Korean enrollment-certificate **free-print PDF**
 was issued end to end and its official completion acknowledgement was accepted.
 No shuttle reservation/cancellation, space application, approval, message,
 payment, paid electronic-certificate order, or other mutation was submitted.
@@ -56,10 +57,10 @@ the university documents a safe supported path.
 
 | Plugin | Verified evidence | Installable result scope | Still pending live acceptance | Disabled writes |
 | --- | --- | --- | --- | --- |
-| Student companion | Official portal page, 59-entry live link catalogue, managed-profile Portal login, public student-service front doors | managed browser-profile reuse, current portal routing, read-only daily briefing, shared runtime for reviewed shuttle/space/dorm/document actions | authenticated result verification for each real write and service-specific login acceptance | attendance check-in, payment, messages, approvals, and unsupported application writes |
+| Student companion | Official portal page, 59-entry live link catalogue, browser-free public course response, managed-profile Portal login, public student-service front doors | zero-setup course-handbook search, managed browser-profile reuse for private data, current portal routing, read-only daily briefing, shared runtime for reviewed shuttle/space/dorm/document actions | authenticated result verification for each real write and service-specific login acceptance | attendance check-in, payment, messages, approvals, and unsupported application writes |
 | LearnUs | Browser-visible Portal Login boundary plus headless SSO parser, memory-only optional session lifecycle, expiry and reauthentication tests | browser-first course, deadline, and material reads; optional hidden-prompt background session | current SSO flow with a student's account after install | course writes, submissions, messages, grading |
 | Academic | Official portal entry, 2026 university catalog, and department-specific requirement pages | supplied class, grade and enrollment audits plus sourced graduation progress and semester planning | official portal graduation-audit comparison for each program | profile, leave/return, registration, withdrawal, grade changes |
-| Course registration | Authenticated 2026-2 Underwood handbook loaded outside registration season and returned current official course rows; the unauthenticated URL exposes only a UI shell; schedule and mileage logic tests | persistent-login catalogue search, course normalization, conflict-free timetable construction, personal-history-aware mileage planning | student mileage history and registration-period demand fields for the selected term after session renewal | actual course registration or mileage submission |
+| Course registration | Public 2026-2 Underwood handbook JSON returned 200 capped Engineering rows through the packaged MCP server in about 2.1 seconds while browser access was deliberately unavailable; schedule and mileage logic tests | browser-free public catalogue search, course normalization, conflict-free timetable construction, and optional personal-history-aware mileage planning | student mileage history and registration-period demand fields for the selected term after login | actual course registration or mileage submission |
 | Attendance | SSO application `yscattend`; official student/chapel guidance | supplied attendance summary, discrepancy review, unsent correction draft | student record fields and correction-status workflow | check-in, presence attestation, record changes, correction submission |
 | Certificate | Official internet-certificate flow, an authenticated Korean enrollment-certificate free-print run, HTTP 200 completion acknowledgement, locally pinned ReportX runtime assets, deterministic one-page PDF replay, and authorized YonseiL embedding check | Windows/macOS/Linux local PDF routing, one-time document-number reservation, durable-save completion notification, template-referenced Yonsei font validation, and optional confirmed physical print | clean-machine acceptance on Windows and Linux plus other certificate templates and named physical printers | certificate-field alteration, generic-font substitution, uncertain retry, paid electronic-certificate payment |
 | Shuttle | Public program `P004023`; official search, reservation, waitlist, history, cancellation operations and row fields | Windows/macOS/Linux live-browser search, stable trip selection, confirmed reservation/waitlist/cancel, official-history verification | authenticated end-to-end run on each OS with an eligible student and real trip | quota bypass, repeated uncertain write, aggressive polling |
@@ -100,6 +101,8 @@ itself and all student-identifying fields are excluded from the repository.
   `https://underwood1.yonsei.ac.kr/com/lgin/SsoCtr/initExtPageWork.do?link=handbList&locale=ko`
 - Catalogue client:
   `https://underwood1.yonsei.ac.kr/ui/contents/sch/sles/slessy/slessy0180.clx.js`
+- Public catalogue result endpoint used by that client:
+  `https://underwood1.yonsei.ac.kr/sch/sles/SlessyCtr/findAtnlcHandbList.do`
 - Electronic attendance:
   `https://ysrollbook.yonsei.ac.kr/`
 

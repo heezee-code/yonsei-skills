@@ -4,6 +4,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -26,10 +27,12 @@ from yonsei_bridge.bridge import (  # noqa: E402
     PageSnapshot,
     SPACE_REQUEST_FIELDS,
     YonseiBridge,
+    _course_college_value,
+    _course_semester_value,
     _redact,
 )
 from yonsei_bridge.mcp_server import TOOLS  # noqa: E402
-from yonsei_bridge.cdp import CdpError, ChromeRuntime  # noqa: E402
+from yonsei_bridge.cdp import CdpConnection, CdpError, ChromeRuntime  # noqa: E402
 from yonsei_bridge.router import INTENTS, StudentRouter, friendly_error  # noqa: E402
 
 
@@ -92,6 +95,8 @@ class YonseiBridgeTests(unittest.TestCase):
         self.assertIn("purpose", request_properties)
         self.assertIn("keyword", request_properties)
         self.assertIn("semester", request_properties)
+        self.assertIn("college", request_properties)
+        self.assertIn("Engineering", request_properties["college"]["description"])
         self.assertNotIn("row_terms", request_properties)
         self.assertNotIn("fields", request_properties)
         self.assertIn("enrollment", request_properties["document_type"]["enum"])
@@ -166,6 +171,77 @@ class YonseiBridgeTests(unittest.TestCase):
 
     def test_course_handbook_has_its_own_underwood_route(self):
         self.assertEqual(MENU_ROUTES["handbook"], ("수업", "수강편람"))
+
+    def test_course_catalog_maps_engineering_and_records_the_result_cap(self):
+        client = mock.Mock()
+        client.search.return_value = {
+            "state": "available",
+            "requested_filters_applied": {
+                "year": True,
+                "semester": True,
+                "college": True,
+            },
+            "unmatched_filters": [],
+            "result_limited": True,
+            "official_result_count": 200,
+            "rows": [
+                {
+                    "fields": {
+                        "학정번호-분반-실습": "ENG1108-01-01",
+                        "교과목명": "공학정보처리",
+                    },
+                    "text": "ENG1108-01-01 | 공학정보처리",
+                }
+            ],
+        }
+        bridge = YonseiBridge.__new__(YonseiBridge)
+        bridge.course_catalog_client = client
+
+        result = bridge.course_catalog(
+            year="2026",
+            semester="2nd semester",
+            college="Engineering",
+        )
+
+        client.search.assert_called_once_with(
+            year="2026",
+            semester="2학기",
+            campus=None,
+            college="공과대학",
+            department=None,
+            keyword=None,
+        )
+        self.assertEqual(_course_college_value("College of Engineering"), "공과대학")
+        self.assertEqual(_course_semester_value("2nd semester"), "2학기")
+        self.assertEqual(result["state"], "available")
+        self.assertTrue(result["result_limited"])
+        self.assertEqual(result["official_result_count"], 200)
+        self.assertEqual(result["rows"][0]["fields"]["교과목명"], "공학정보처리")
+
+    def test_cdp_dismisses_alerts_without_accepting_confirm_dialogs(self):
+        connection = CdpConnection.__new__(CdpConnection)
+        connection.websocket = mock.Mock()
+        connection._next_id = 7
+        connection._id_lock = threading.Lock()
+
+        connection._handle_automatic_event(
+            {
+                "method": "Page.javascriptDialogOpening",
+                "params": {"type": "alert", "message": "200건 이상"},
+            }
+        )
+        sent = json.loads(connection.websocket.send.call_args.args[0])
+        self.assertEqual(sent["method"], "Page.handleJavaScriptDialog")
+        self.assertEqual(sent["params"], {"accept": True})
+
+        connection.websocket.send.reset_mock()
+        connection._handle_automatic_event(
+            {
+                "method": "Page.javascriptDialogOpening",
+                "params": {"type": "confirm", "message": "계속할까요?"},
+            }
+        )
+        connection.websocket.send.assert_not_called()
 
     def test_structured_rows_preserve_headers_and_unlabelled_rows(self):
         snapshot = PageSnapshot(
@@ -929,7 +1005,7 @@ class YonseiBridgeTests(unittest.TestCase):
             request={
                 "year": "2026",
                 "semester": "2학기",
-                "course_type": "공과대학",
+                "college": "Engineering",
                 "keyword": "자료구조",
             },
         )
@@ -940,7 +1016,47 @@ class YonseiBridgeTests(unittest.TestCase):
             primary["current_registration_state"],
             "registration_period_limited_or_unavailable",
         )
+        self.assertEqual(fake.arguments["college"], "Engineering")
         self.assertEqual(fake.arguments["keyword"], "자료구조")
+
+    def test_course_search_does_not_open_personal_registration_pages(self):
+        class FakeBridge:
+            def course_catalog(self, **arguments):
+                self.arguments = arguments
+                return {
+                    "state": "available",
+                    "rows": [{"text": "ENG1108-01-01 | 공학정보처리"}],
+                    "requested_filters_applied": {
+                        "year": True,
+                        "semester": True,
+                        "college": True,
+                    },
+                    "unmatched_filters": [],
+                    "result_limited": True,
+                    "official_result_count": 200,
+                    "notices": ["200건 이상"],
+                }
+
+            def mileage(self, **_arguments):
+                raise AssertionError("A catalogue-only search must not open personal pages")
+
+        fake = FakeBridge()
+        result = StudentRouter(fake).run(
+            intent="courses",
+            action="search",
+            request={
+                "year": "2026",
+                "semester": "2nd semester",
+                "college": "Engineering",
+            },
+        )
+
+        self.assertEqual(result["status"], "ready")
+        self.assertEqual(result["primary_result"]["title"], "공식 수강편람을 확인했습니다.")
+        self.assertTrue(result["primary_result"]["result_limited"])
+        self.assertEqual(result["primary_result"]["official_result_count"], 200)
+        self.assertEqual(result["primary_result"]["current_registration_state"], "not_requested")
+        self.assertEqual(fake.arguments["college"], "Engineering")
 
     def test_course_filter_failure_is_not_reported_ready(self):
         class FakeBridge:
@@ -1015,7 +1131,7 @@ class YonseiBridgeTests(unittest.TestCase):
             initialized = json.loads(process.stdout.readline())
             listed = json.loads(process.stdout.readline())
             korean_error = json.loads(process.stdout.readline())
-            self.assertEqual(initialized["result"]["serverInfo"]["version"], "0.6.0")
+            self.assertEqual(initialized["result"]["serverInfo"]["version"], "0.7.0")
             self.assertEqual(len(listed["result"]["tools"]), 2)
             self.assertTrue(korean_error["result"]["isError"])
             self.assertIn(

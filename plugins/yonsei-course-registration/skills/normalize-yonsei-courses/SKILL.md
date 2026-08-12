@@ -10,11 +10,25 @@ User-provided files remain a fallback, not the default collection step.
 
 ## Prepare the input
 
-First call `yonsei_student` with `intent: "courses"` and pass known search
-conditions such as `year`, `semester`, `campus`, `course_type`, `department`,
-and `keyword`. Use `primary_result.courses` from the authenticated
-`수업 → 수강편람` query. The separate registration site may be period-limited;
-that does not make the handbook unavailable.
+First call `yonsei_student` with `intent: "courses"`, `action: "search"`, and
+pass known search conditions such as `year`, `semester`, `campus`, `college`,
+`department`, and `keyword`. Put a college or catalogue category such as
+`Engineering`, `College of Engineering`, or `공과대학` in `college`; reserve
+`department` for a department within that college. Use
+`primary_result.courses` from the official public `수업 → 수강편람` query.
+This query runs through direct HTTPS JSON, does not launch a browser, and does
+not require login, Accessibility, Screen Recording, or Computer Use setup. The
+separate registration site and personal mileage history remain login-dependent
+and may be period-limited; that does not make the public handbook unavailable.
+
+Do not use general web search for live handbook rows. If `yonsei_student` is
+not available, tell the student that `yonsei-student-companion` is missing or
+inactive instead of waiting on web search. If the tool returns a temporary
+failure, report it once and stop rather than repeating the same query. When
+`primary_result.result_limited` is true, explain that the official page capped
+the result, distinguish `course_count` (rows read from the current grid) from
+`official_result_count`, and ask for a department or keyword before running
+another query. Do not call `yonsei_bridge_connect` for a catalogue-only search.
 
 If the direct official query fails, or the user intentionally attaches a
 course-catalogue screen, PDF, spreadsheet, or pasted table, extract recognized
@@ -37,7 +51,7 @@ Treat the emitted `yonsei-normalized-courses/v1` JSON as the handoff contract fo
 
 ## Boundaries
 
-- Prefer the authenticated Underwood handbook. Do not ask for a screenshot
+- Prefer the direct official Underwood handbook. Do not ask for a screenshot
   while that direct path works.
 - The normalization script itself transforms supplied rows; only
   `yonsei_student` may claim that rows came from the official handbook query.
