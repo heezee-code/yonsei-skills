@@ -21,7 +21,10 @@ else:
 TOOLS = [
     {
         "name": "yonsei_bridge_connect",
-        "description": "Open or reuse the managed Yonsei browser profile and report whether official login is ready.",
+        "description": (
+            "Open or reuse the managed Yonsei browser profile for login-dependent tasks. "
+            "Do not call this before a public course-handbook search."
+        ),
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
@@ -30,6 +33,8 @@ TOOLS = [
             "Use this single student-friendly tool for Yonsei daily tasks, academic applications, "
             "official course-handbook search and mileage, graduation, shuttle, spaces, dorms, "
             "documents, LearnUs, and attendance. "
+            "A course search with action=search uses the public official JSON endpoint directly "
+            "and needs no browser, login, Accessibility, Screen Recording, or Computer Use. "
             "Ask for every applicable document option together before opening the official route. "
             "For a document issue, request login only at the initial boundary and then make one "
             "reviewed call with confirmed=true; never ask again mid-flow."
@@ -79,9 +84,31 @@ TOOLS = [
                         "application": {"type": "string"},
                         "include_teaching": {"type": "boolean"},
                         "year": {"type": "string"},
-                        "semester": {"type": "string"},
-                        "course_type": {"type": "string"},
-                        "department": {"type": "string"},
+                        "semester": {
+                            "type": "string",
+                            "description": (
+                                "Semester in student language, such as 2, 2nd semester, "
+                                "fall, or 2학기."
+                            ),
+                        },
+                        "college": {
+                            "type": "string",
+                            "description": (
+                                "College or catalogue category, for example Engineering, "
+                                "College of Engineering, or 공과대학."
+                            ),
+                        },
+                        "course_type": {
+                            "type": "string",
+                            "description": "Backward-compatible alias for college; prefer college.",
+                        },
+                        "department": {
+                            "type": "string",
+                            "description": (
+                                "Department within a college; do not put a college such as "
+                                "Engineering or 공과대학 here."
+                            ),
+                        },
                         "keyword": {"type": "string"},
                         "origin": {"type": "string"},
                         "destination": {"type": "string"},
@@ -214,7 +241,7 @@ def main() -> int:
                     {
                         "protocolVersion": message.get("params", {}).get("protocolVersion", "2025-06-18"),
                         "capabilities": {"tools": {"listChanged": False}},
-                        "serverInfo": {"name": "yonsei-bridge", "version": "0.6.0"},
+                        "serverInfo": {"name": "yonsei-bridge", "version": "0.7.0"},
                     },
                 )
             elif method == "ping":

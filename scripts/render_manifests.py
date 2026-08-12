@@ -20,11 +20,11 @@ INSTALLATIONS = {
 
 SPECS = {
     "yonsei-student-companion": {
-        "version": "0.6.0",
+        "version": "0.7.0",
         "display": "오늘의 연세·포털 연결",
-        "description": "한 번 로그인한 전용 관리 브라우저를 이어 쓰고 포털·Underwood·LearnUs·출결과 생활관·장학금·교환학생 업무를 자연어로 처리합니다.",
+        "description": "공개 수강편람은 브라우저 없이 조회하고, 로그인이 필요한 포털·Underwood·LearnUs·출결과 생활관·장학금·교환학생 업무는 전용 관리 브라우저를 이어 처리합니다.",
         "short": "한 번 로그인하고 학교생활을 한눈에",
-        "long": "앱이 여는 연세 전용 관리 브라우저에서 학생이 직접 로그인하면 같은 프로필을 계속 재사용합니다. 지원되는 환경에서는 이미 열린 공식 탭에도 연결할 수 있습니다. 포털·Underwood·LearnUs·출결의 읽기 결과와 생활관·장학금·교환학생의 공식 화면 진행을 자연어로 돕습니다.",
+        "long": "공개 Underwood 수강편람은 공식 HTTPS JSON을 직접 조회하므로 브라우저·로그인·macOS 권한 설정이 필요하지 않습니다. 로그인이 필요한 업무에서는 앱이 여는 연세 전용 관리 브라우저에서 학생이 직접 로그인하면 같은 프로필을 계속 재사용합니다. 포털·Underwood 개인자료·LearnUs·출결의 읽기 결과와 생활관·장학금·교환학생의 공식 화면 진행을 자연어로 돕습니다.",
         "keywords": ["yonsei", "portal", "session", "student", "daily", "dorm", "scholarship", "exchange"],
         "capabilities": [
             "Persistent browser-profile session reuse",
@@ -34,7 +34,7 @@ SPECS = {
             "Browser-guided scholarship tracking",
             "Browser-guided exchange journey tracking",
             "Fast authenticated Portal and Underwood commands",
-            "Direct official Underwood course-handbook search",
+            "Zero-setup official Underwood course-handbook search",
             "Cross-platform shuttle, space, dorm, and document actions",
             "Single student-language router",
             "Student-friendly recovery messages and primary results",
@@ -139,15 +139,15 @@ SPECS = {
         ],
     },
     "yonsei-course-registration": {
-        "version": "0.5.1",
+        "version": "0.6.0",
         "display": "연세 수강계획 도우미",
-        "description": "‘오늘의 연세·포털 연결’의 로그인을 이어 Underwood 수강편람을 직접 조회하고, 정원·개인 마일리지 이력·졸업 중요도를 반영해 수강신청 전략을 만듭니다.",
+        "description": "브라우저나 로그인 없이 Underwood 공개 수강편람을 직접 조회하고, 필요할 때만 개인 마일리지 이력·정원·졸업 중요도를 반영해 수강신청 전략을 만듭니다.",
         "short": "시간표 조합과 마일리지 배분 전략",
-        "long": "‘오늘의 연세·포털 연결’의 전용 브라우저 로그인을 이어 Underwood 수강편람을 직접 조회하고, 시간·캠퍼스 이동·공강·학점 조건을 검사해 시간표 후보를 순위화합니다. 개인 마일리지 이력과 현재 확인 가능한 정원·신청자, 동점자 기준, 필수 여부, 대체 과목을 함께 고려합니다. 수강신청 화면이 기간 제한으로 닫혀도 인증된 수강편람 조회는 이어갑니다.",
+        "long": "공개 Underwood 수강편람은 공식 HTTPS JSON으로 직접 조회하므로 브라우저·로그인·Accessibility·화면 기록 설정이 필요하지 않습니다. 시간·캠퍼스 이동·공강·학점 조건을 검사해 시간표 후보를 순위화합니다. 개인 마일리지 이력과 현재 정원·신청자 자료가 필요한 전략만 ‘오늘의 연세·포털 연결’의 로그인 세션을 이어 사용합니다.",
         "keywords": ["yonsei", "courses", "registration", "schedule"],
         "capabilities": [
             "Course-row normalization",
-            "Authenticated Underwood handbook query",
+            "Browser-free official Underwood handbook query",
             "Registration-period independent course discovery",
             "Schedule and campus conflict checks",
             "Explicit course-plan constraint audits",

@@ -22,16 +22,14 @@ from urllib.parse import urlsplit
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from yonsei_bridge.cdp import BridgeError, CdpConnection, ChromeRuntime
+    from yonsei_bridge.course_catalog import OfficialCourseCatalogClient
 else:
     from .cdp import BridgeError, CdpConnection, ChromeRuntime
+    from .course_catalog import OfficialCourseCatalogClient
 
 
 PORTAL = "https://portal.yonsei.ac.kr/ui/index.html"
 UNDERWOOD = "https://underwood1.yonsei.ac.kr/com/lgin/SsoCtr/initPageWork.do"
-COURSE_CATALOG = (
-    "https://underwood1.yonsei.ac.kr/com/lgin/SsoCtr/"
-    "initExtPageWork.do?link=handbList&locale=ko"
-)
 SPACE = "https://space.yonsei.ac.kr/"
 LEARNUS = "https://ys.learnus.org/my/"
 ATTENDANCE = "https://ysrollbook.yonsei.ac.kr/"
@@ -88,6 +86,31 @@ DOCUMENT_LABELS = {
     "completion": "수료증명서",
 }
 
+COURSE_COLLEGE_ALIASES = {
+    "college of engineering": "공과대학",
+    "engineering": "공과대학",
+    "engineering college": "공과대학",
+}
+
+COURSE_SEMESTER_ALIASES = {
+    "1": "1학기",
+    "1st": "1학기",
+    "1st semester": "1학기",
+    "first": "1학기",
+    "first semester": "1학기",
+    "spring": "1학기",
+    "spring semester": "1학기",
+    "2": "2학기",
+    "2nd": "2학기",
+    "2nd semester": "2학기",
+    "autumn": "2학기",
+    "autumn semester": "2학기",
+    "fall": "2학기",
+    "fall semester": "2학기",
+    "second": "2학기",
+    "second semester": "2학기",
+}
+
 
 def _normalized_value(value: Any) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip().casefold()
@@ -109,6 +132,16 @@ def _requested_value_matches(requested: Any, actual: Any) -> bool:
         observed_hour, observed_minute = (int(part) for part in observed.split(":"))
         return (wanted_hour, wanted_minute) == (observed_hour, observed_minute)
     return wanted == observed or wanted in observed or observed in wanted
+
+
+def _course_college_value(value: Any) -> str:
+    requested = str(value or "").strip()
+    return COURSE_COLLEGE_ALIASES.get(_normalized_value(requested), requested)
+
+
+def _course_semester_value(value: Any) -> str:
+    requested = str(value or "").strip()
+    return COURSE_SEMESTER_ALIASES.get(_normalized_value(requested), requested)
 
 
 def _redact(text: str) -> str:
@@ -1028,10 +1061,11 @@ class BrowserPage:
                   .filter(row => !row.closest('.cl-grid-header') && !row.matches('[role="columnheader"]'))
                   .slice(0,300)
                   .map(row => {
-                    const cells = [...row.querySelectorAll(
-                      '.cl-grid-cell,[role="gridcell"],td,th,.cl-output,.cl-text'
-                    )].map(cellText).filter(Boolean);
-                    return cells.length ? cells : lines(cellText(row));
+                    const cellSelector = '.cl-grid-cell,[role="gridcell"],td,th';
+                    const cells = [...row.querySelectorAll(cellSelector)]
+                      .filter(cell => !cell.parentElement?.closest(cellSelector))
+                      .map(cellText);
+                    return cells.some(Boolean) ? cells : lines(cellText(row));
                   }).filter(row => row.length);
                 return {
                   index,
@@ -1314,8 +1348,8 @@ class YonseiBridge:
             headers = [str(value) for value in grid.get("headers", [])]
             for row_index, values in enumerate(grid.get("rows", [])):
                 values = [str(value) for value in values]
-                if headers and len(headers) == len(values):
-                    fields = dict(zip(headers, values))
+                if headers and len(values) <= len(headers):
+                    fields = dict(zip(headers[: len(values)], values))
                 else:
                     fields = {f"column_{index + 1}": value for index, value in enumerate(values)}
                 result.append(
@@ -1969,89 +2003,38 @@ class YonseiBridge:
         year: str | None = None,
         semester: str | None = None,
         campus: str | None = None,
+        college: str | None = None,
         course_type: str | None = None,
         department: str | None = None,
         keyword: str | None = None,
     ) -> dict[str, Any]:
-        """Query the authenticated Underwood handbook independently of registration."""
-        page = self._page()
-        page.navigate(COURSE_CATALOG, wait=2.5)
-        if page.wait_for_login_state() == "login_required":
-            raise BridgeError("login_required")
-        applied: dict[str, bool] = {}
-        if year:
-            applied["year"] = page.type_after_label("학년도/학기", str(year), index=0)
-        if semester:
-            applied["semester"] = page.select_after_label(
-                "학년도/학기", str(semester), index=0
-            )
-        if campus:
-            applied["campus"] = page.select_after_label("구분", str(campus))
-        if course_type:
-            applied["course_type"] = page.select_after_label(
-                "대학(원)/분류", str(course_type)
-            )
-        if department:
-            applied["department"] = page.select_after_label("개설학과", str(department))
-        if keyword:
-            applied["keyword"] = page.type_after_label("통합검색", str(keyword))
-        filters = page.values_after_labels(
-            ["학년도/학기", "구분", "대학(원)/분류", "개설학과", "통합검색"]
+        """Query the public handbook directly without a browser or login."""
+        client = getattr(self, "course_catalog_client", None)
+        if client is None:
+            client = OfficialCourseCatalogClient()
+            self.course_catalog_client = client
+        requested_college = college or course_type
+        result = client.search(
+            year=year,
+            semester=_course_semester_value(semester) if semester else None,
+            campus=campus,
+            college=(
+                _course_college_value(requested_college)
+                if requested_college
+                else None
+            ),
+            department=department,
+            keyword=keyword,
         )
-        requested = {
-            "year": ("학년도/학기", year),
-            "semester": ("학년도/학기", semester),
-            "campus": ("구분", campus),
-            "course_type": ("대학(원)/분류", course_type),
-            "department": ("개설학과", department),
-            "keyword": ("통합검색", keyword),
-        }
-        for key, (label, value) in requested.items():
-            if value in (None, ""):
-                continue
-            applied[key] = any(
-                _requested_value_matches(value, observed)
-                for observed in filters.get(label, [])
-            )
-        unmatched_filters = [
-            key
-            for key, (_, value) in requested.items()
-            if value not in (None, "") and not applied.get(key, False)
-        ]
-        if unmatched_filters:
-            snapshot = page.snapshot(text_after="수강편람")
-            return {
-                "schema": "yonsei-course-catalog-command/v1",
-                "state": "field_mapping_required",
-                "source": "underwood-course-handbook",
-                "registration_period_required": False,
-                "snapshot": snapshot.as_dict(),
-                "filters": filters,
-                "requested_filters_applied": applied,
-                "unmatched_filters": unmatched_filters,
-                "rows": [],
-            }
-        if not page.click_text("조회"):
-            raise BridgeError("The official course-handbook query button was not available.")
-        time.sleep(1.8)
-        snapshot = page.snapshot(text_after="수강편람")
-        rows = [
-            row
-            for row in self._rows(snapshot)
-            if "조회된 내역이 없습니다" not in row.get("text", "")
-        ]
-        no_results = "조회된 내역이 없습니다" in snapshot.text and not rows
-        return {
-            "schema": "yonsei-course-catalog-command/v1",
-            "state": "no_results" if no_results else "available",
-            "source": "underwood-course-handbook",
-            "registration_period_required": False,
-            "snapshot": snapshot.as_dict(),
-            "filters": filters,
-            "requested_filters_applied": applied,
-            "unmatched_filters": [],
-            "rows": rows,
-        }
+        if course_type and not college:
+            applied = result.get("requested_filters_applied", {})
+            if "college" in applied:
+                applied["course_type"] = applied.pop("college")
+            unmatched = result.get("unmatched_filters", [])
+            result["unmatched_filters"] = [
+                "course_type" if item == "college" else item for item in unmatched
+            ]
+        return result
 
     def mileage(
         self,
@@ -2059,6 +2042,7 @@ class YonseiBridge:
         year: str | None = None,
         semester: str | None = None,
         campus: str | None = None,
+        college: str | None = None,
         course_type: str | None = None,
         department: str | None = None,
         keyword: str | None = None,
@@ -2067,6 +2051,7 @@ class YonseiBridge:
             year=year,
             semester=semester,
             campus=campus,
+            college=college,
             course_type=course_type,
             department=department,
             keyword=keyword,

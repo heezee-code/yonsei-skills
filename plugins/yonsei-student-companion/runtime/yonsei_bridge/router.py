@@ -161,18 +161,38 @@ class StudentRouter:
             catalog_rows = catalog.get("rows", [])
             history = result.get("history", {}).get("rows", [])
             current = result.get("current_registration", {}).get("rows", [])
+            catalog_only = (
+                result.get("history", {}).get("state") == "not_requested"
+                and result.get("current_registration", {}).get("state")
+                == "not_requested"
+            )
             filters_applied = catalog.get("requested_filters_applied", {})
             unmatched_filters = catalog.get("unmatched_filters", [])
             return {
                 "title": (
                     "수강편람 검색 조건을 적용하지 못했습니다."
                     if catalog.get("state") == "field_mapping_required"
-                    else "공식 수강편람과 개인 수강 자료를 확인했습니다."
+                    else (
+                        "공식 수강편람을 확인했습니다."
+                        if catalog_only
+                        else "공식 수강편람과 개인 수강 자료를 확인했습니다."
+                    )
                 ),
                 "course_count": len(catalog_rows),
+                "official_result_count": catalog.get(
+                    "official_result_count", len(catalog_rows)
+                ),
                 "history_count": len(history),
                 "current_course_count": len(current),
                 "catalog_state": catalog.get("state"),
+                "result_limited": bool(catalog.get("result_limited", False)),
+                "returned_result_limited": bool(
+                    catalog.get("returned_result_limited", False)
+                ),
+                "catalog_notices": catalog.get("notices", []),
+                "transport": catalog.get("transport"),
+                "browser_used": catalog.get("browser_used"),
+                "login_required": catalog.get("login_required"),
                 "requested_filters_applied": filters_applied,
                 "unmatched_filters": unmatched_filters,
                 "registration_period_required_for_catalog": False,
@@ -299,14 +319,31 @@ class StudentRouter:
                 application=request.get("application"),
             )
         elif intent == "courses":
-            result = self.bridge.mileage(
-                year=request.get("year"),
-                semester=request.get("semester"),
-                campus=request.get("campus"),
-                course_type=request.get("course_type"),
-                department=request.get("department"),
-                keyword=request.get("keyword"),
-            )
+            course_filters = {
+                "year": request.get("year"),
+                "semester": request.get("semester"),
+                "campus": request.get("campus"),
+                "college": request.get("college"),
+                "course_type": request.get("course_type"),
+                "department": request.get("department"),
+                "keyword": request.get("keyword"),
+            }
+            if action == "search":
+                catalog = self.bridge.course_catalog(**course_filters)
+                result = {
+                    "state": catalog.get("state"),
+                    "catalog": catalog,
+                    "history": {"state": "not_requested", "rows": []},
+                    "current_registration": {
+                        "state": "not_requested",
+                        "rows": [],
+                    },
+                    "planning_inputs_ready": bool(catalog.get("rows")),
+                    "planning_performed": False,
+                    "registration_performed": False,
+                }
+            else:
+                result = self.bridge.mileage(**course_filters)
         elif intent == "graduation":
             result = self.bridge.graduation_teaching(
                 include_teaching=bool(request.get("include_teaching", True))

@@ -33,6 +33,8 @@ jobs:
           fi
       - name: Validate repository
         run: python3 -B scripts/validate_repo.py
+      - name: Check live public course handbook without a browser
+        run: python3 -B scripts/check_course_catalog_live.py
       - name: Build student downloads
         run: python3 -B scripts/build_release_packages.py --version "${{ steps.version.outputs.value }}"
       - name: Upload workflow artifact

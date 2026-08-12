@@ -73,6 +73,10 @@ class ReleasePackageTests(unittest.TestCase):
                     "yonsei-student-life/runtime/yonsei_bridge/mcp_server.py",
                     archive.namelist(),
                 )
+                self.assertIn(
+                    "yonsei-student-life/runtime/yonsei_bridge/course_catalog.py",
+                    archive.namelist(),
+                )
                 skill_files = [
                     name for name in archive.namelist()
                     if name.endswith("/SKILL.md") and "/skills/" in name

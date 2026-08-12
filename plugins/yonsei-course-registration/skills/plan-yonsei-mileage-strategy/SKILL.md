@@ -13,7 +13,9 @@ past results. Do not present historical cutoffs as guarantees.
 Call `yonsei_student` with `intent: "courses"`. Its `primary_result` contains
 the current official Underwood handbook rows, personal mileage history, and any
 available current registration rows. Pass the student's year, semester, campus,
-college or category, department, and course keyword in `request` when known.
+college or category in `college`, department, and course keyword in `request`
+when known. Do not put a college such as Engineering or `공과대학` in the
+`department` field.
 Feed those values into the bundled calculator; ask only for constraints or
 desired courses that are not visible.
 
