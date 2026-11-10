@@ -18,11 +18,14 @@ Run this only after `$calculate-yonsei-graduation-progress`.
    python3 "$SKILL_DIR/scripts/plan_graduation_path.py" --input "<temporary-json>"
    ```
 
-5. Explain the earliest feasible plan, unscheduled requirements, prerequisite bottlenecks, and courses whose future offering is only assumed.
+5. Explain the heuristic plan, unscheduled requirements, prerequisite bottlenecks, and courses whose future offering is only assumed. This greedy planner does not prove the earliest possible graduation term.
 6. Pass the next-term candidates to `$plan-yonsei-mileage-strategy` when registration competition matters.
 
 ## Boundaries
 
+- Accumulate remaining credits and course-set counts; one mapped course does not complete an entire requirement. Inspect `remaining_requirements` after planning.
+- Facts cannot be satisfied by course mappings. An incomplete graduation-progress input must not produce a feasible verdict.
+- `future_offerings_verified` only records whether offered terms were supplied; it is not evidence of a live official query.
 - Treat future offerings and graduation timing as plans, not guarantees.
 - Do not count a course toward a requirement unless the official rule mapping is supplied.
 - Do not submit a course registration.

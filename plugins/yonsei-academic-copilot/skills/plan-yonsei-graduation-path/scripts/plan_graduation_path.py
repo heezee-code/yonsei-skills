@@ -62,13 +62,46 @@ def run(payload: Any) -> dict[str, Any]:
     if len(terms) != len(set(terms)):
         raise InputError("duplicate-term", "terms must be unique.", "$.terms")
     maximum = credits(payload.get("max_credits_per_term", 18), "$.max_credits_per_term")
-    completed = string_set(payload.get("completed_course_codes"), "$.completed_course_codes")
+    completed = {code.upper() for code in string_set(payload.get("completed_course_codes"), "$.completed_course_codes")}
 
     remaining_ids = {
         item["id"]
         for item in progress.get("requirements", [])
         if isinstance(item, dict) and not item.get("satisfied", False)
     }
+    rules = {item["id"]: item for item in progress.get("requirements", []) if isinstance(item, dict)}
+    remaining: dict[str, float] = {}
+    for rule_id in remaining_ids:
+        rule = rules[rule_id]
+        if rule.get("type") in {"total_credits", "category_credits"}:
+            remaining[rule_id] = credits(rule.get("remaining"), f"$.progress.requirements.{rule_id}.remaining")
+        elif rule.get("type") == "course_set":
+            remaining[rule_id] = credits(rule.get("remaining_count"), f"$.progress.requirements.{rule_id}.remaining_count")
+        else:
+            # Facts and unsupported rules cannot be completed by adding a course.
+            remaining[rule_id] = 1.0
+    for rule in rules.values():
+        completed.update(code.upper() for code in rule.get("completed_courses", []))
+        completed.update(code.upper() for code in rule.get("matched_completed_courses", []))
+
+    def contributions(course: dict[str, Any]) -> dict[str, float]:
+        result: dict[str, float] = {}
+        exclusive_category_used = False
+        for rule_id, rule in rules.items():
+            if rule_id not in course["requirement_ids"] or remaining.get(rule_id, 0) <= 0:
+                continue
+            kind = rule.get("type")
+            if kind in {"total_credits", "category_credits"}:
+                if kind == "category_credits" and rule.get("allow_overlap") is False:
+                    if exclusive_category_used:
+                        continue
+                    exclusive_category_used = True
+                result[rule_id] = min(remaining[rule_id], course["credits"])
+            elif kind == "course_set" and course["course_code"] in {
+                code.upper() for code in rule.get("course_codes", [])
+            }:
+                result[rule_id] = min(remaining[rule_id], 1.0)
+        return {key: value for key, value in result.items() if value > 0}
     candidates_raw = payload.get("courses")
     if not isinstance(candidates_raw, list):
         raise InputError("invalid-courses", "courses must be an array.", "$.courses")
@@ -106,7 +139,7 @@ def run(payload: Any) -> dict[str, Any]:
             course
             for course in courses
             if course["course_code"] not in planned
-            and bool(course["requirement_ids"] & (remaining_ids - covered))
+            and bool(contributions(course))
         ]
         needed_prerequisites = set().union(
             *(course["prerequisites"] - planned for course in target_courses)
@@ -118,7 +151,7 @@ def run(payload: Any) -> dict[str, Any]:
             and (not course["offered_terms"] or term in course["offered_terms"])
             and course["prerequisites"].issubset(planned)
             and (
-                bool(course["requirement_ids"] & (remaining_ids - covered))
+                bool(contributions(course))
                 or course["course_code"] in needed_prerequisites
             )
         ]
@@ -136,7 +169,8 @@ def run(payload: Any) -> dict[str, Any]:
         for course in available:
             if term_credits + course["credits"] > maximum:
                 continue
-            newly_covered = course["requirement_ids"] & (remaining_ids - covered)
+            applied = contributions(course)
+            newly_covered = set(applied)
             is_needed_prerequisite = course["course_code"] in needed_prerequisites
             if not newly_covered and not is_needed_prerequisite:
                 continue
@@ -146,12 +180,16 @@ def run(payload: Any) -> dict[str, Any]:
                     "title": course["title"],
                     "credits": course["credits"],
                     "covers": sorted(newly_covered),
+                    "requirement_contributions": applied,
                     "prerequisite_for_later_requirement": is_needed_prerequisite,
                 }
             )
             term_credits += course["credits"]
             planned.add(course["course_code"])
-            covered.update(newly_covered)
+            for rule_id, amount in applied.items():
+                remaining[rule_id] = round(max(0.0, remaining[rule_id] - amount), 6)
+                if remaining[rule_id] == 0:
+                    covered.add(rule_id)
         schedule.append(
             {
                 "term": term,
@@ -185,7 +223,9 @@ def run(payload: Any) -> dict[str, Any]:
     return {
         "schema": "yonsei-graduation-path/v1",
         "advisory_only": True,
-        "feasible_with_supplied_courses": not unresolved,
+        "feasible_with_supplied_courses": not unresolved and progress.get("complete") is True,
+        "progress_complete": progress.get("complete") is True,
+        "remaining_requirements": {key: value for key, value in remaining.items() if value > 0},
         "planned_terms": schedule,
         "covered_requirement_ids": sorted(covered),
         "unresolved_requirement_ids": unresolved,
